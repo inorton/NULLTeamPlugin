@@ -1,24 +1,25 @@
 from __future__ import with_statement, division
 
-import unittest
 import os
-import time
 import shutil
 import subprocess
+import time
+import unittest
 from binascii import hexlify, unhexlify
 from hashlib import sha1, sha256, sha512
 
-from .six import b, print_, binary_type
-from .keys import SigningKey, VerifyingKey
-from .keys import BadSignatureError
+from . import der
+from . import rfc6979
 from . import util
-from .util import sigencode_der, sigencode_strings
-from .util import sigdecode_der, sigdecode_strings
 from .curves import Curve, UnknownCurveError
 from .curves import NIST192p, NIST224p, NIST256p, NIST384p, NIST521p, SECP256k1
 from .ellipticcurve import Point
-from . import der
-from . import rfc6979
+from .keys import BadSignatureError
+from .keys import SigningKey, VerifyingKey
+from .six import b, print_, binary_type
+from .util import sigdecode_der, sigdecode_strings
+from .util import sigencode_der, sigencode_strings
+
 
 class SubprocessError(Exception):
     pass
@@ -242,7 +243,7 @@ class ECDSA(unittest.TestCase):
         self.assertTruePubkeysEqual(pub1, pub2)
 
         self.assertRaises(der.UnexpectedDER,
-                              VerifyingKey.from_der, pub1_der+b("junk"))
+                          VerifyingKey.from_der, pub1_der + b("junk"))
         badpub = VerifyingKey.from_der(pub1_der)
         class FakeGenerator:
             def order(self): return 123456789
@@ -444,7 +445,7 @@ class DER(unittest.TestCase):
         self.assertEqual(der.encode_number(0), b("\x00"))
         self.assertEqual(der.encode_number(127), b("\x7f"))
         self.assertEqual(der.encode_number(128), b("\x81\x00"))
-        self.assertEqual(der.encode_number(3*128+7), b("\x83\x07"))
+        self.assertEqual(der.encode_number(3 * 128 + 7), b("\x83\x07"))
         #self.assertEqual(der.read_number("\x81\x9b"+"more"), (155, 2))
         #self.assertEqual(der.encode_number(155), b("\x81\x9b"))
         for n in (0, 1, 2, 127, 128, 3*128+7, 840, 10045): #, 155):
@@ -459,8 +460,8 @@ class DER(unittest.TestCase):
         self.assertEqual(der.encode_length(128), b("\x81\x80"))
         self.assertEqual(der.encode_length(255), b("\x81\xff"))
         self.assertEqual(der.encode_length(256), b("\x82\x01\x00"))
-        self.assertEqual(der.encode_length(3*256+7), b("\x82\x03\x07"))
-        self.assertEqual(der.read_length(b("\x81\x9b")+b("more")), (155, 2))
+        self.assertEqual(der.encode_length(3 * 256 + 7), b("\x82\x03\x07"))
+        self.assertEqual(der.read_length(b("\x81\x9b") + b("more")), (155, 2))
         self.assertEqual(der.encode_length(155), b("\x81\x9b"))
         for n in (0, 1, 2, 127, 128, 255, 256, 3*256+7, 155):
             x = der.encode_length(n) + b("more")

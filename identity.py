@@ -1,6 +1,7 @@
-import os
-import hashlib
 import binascii
+import hashlib
+import os
+
 from ecdsa import SigningKey, curves
 from ecdsa import util as ecdsautil
 

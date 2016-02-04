@@ -34,8 +34,8 @@
 
 from __future__ import division
 
-from .six import print_
 from . import numbertheory
+from .six import print_
 
 class CurveFp( object ):
   """Elliptic Curve over the field of integers modulo a prime."""
@@ -98,8 +98,8 @@ class Point( object ):
 
     p = self.__curve.p()
 
-    l = ( ( other.__y - self.__y ) * \
-          numbertheory.inverse_mod( other.__x - self.__x, p ) ) % p
+    l = (( other.__y - self.__y ) * \
+         numbertheory.inverse_mod(other.__x - self.__x, p)) % p
 
     x3 = ( l * l - self.__x - other.__x ) % p
     y3 = ( l * ( self.__x - x3 ) - self.__y ) % p
@@ -157,8 +157,8 @@ class Point( object ):
     p = self.__curve.p()
     a = self.__curve.a()
 
-    l = ( ( 3 * self.__x * self.__x + a ) * \
-          numbertheory.inverse_mod( 2 * self.__y, p ) ) % p
+    l = (( 3 * self.__x * self.__x + a ) * \
+         numbertheory.inverse_mod(2 * self.__y, p)) % p
 
     x3 = ( l * l - 2 * self.__x ) % p
     y3 = ( l * ( self.__x - x3 ) - self.__y ) % p

@@ -1,9 +1,10 @@
 from __future__ import division
 
-import os
-import math
 import binascii
+import math
+import os
 from hashlib import sha256
+
 from . import der
 from .curves import orderlen
 from .six import PY3, int2byte, b, next
