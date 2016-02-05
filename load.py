@@ -7,7 +7,12 @@ import ttk
 import Tkinter as tk
 import json
 
-from config import applongname, appversion
+THISFILE = os.path.abspath(__file__)
+THISDIR = os.path.dirname(THISFILE)
+
+sys.path.insert(0, THISDIR)
+
+import identity
 import myNotebook as nb
 
 PLUGNAME = "NULLTeam"
@@ -19,6 +24,7 @@ def plugin_start():
     :return:
     """
     sys.stderr.write(PLUGNAME + " plugin started\n")  # appears in %TMP%/EDMarketConnector.log in packaged Windows app
+    identity.first_run(THISDIR)
 
 
 def plugin_prefs(parent):
@@ -26,7 +32,6 @@ def plugin_prefs(parent):
     Return a TK Frame for adding to the EDMC settings dialog.
     """
     frame = nb.Frame(parent)
-
 
     return frame
 

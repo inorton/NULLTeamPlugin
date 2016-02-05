@@ -1,9 +1,49 @@
 import binascii
 import hashlib
 import os
+import sys
 
 from ecdsa import SigningKey, curves
 from ecdsa import util as ecdsautil
+
+def get_keys_folder(datafolder):
+    """
+    :param datafolder:
+    :return:
+    """
+    return os.path.join(datafolder, "keys")
+
+def get_pub_keyfilename(datafolder):
+    """
+    :param datafolder:
+    :return:
+    """
+    keyfolder = get_keys_folder(datafolder)
+    return os.path.join(keyfolder, "identity.pub")
+
+
+def get_priv_keyfilename(datafolder):
+    """
+    :param datafolder:
+    :return:
+    """
+    keyfolder = get_keys_folder(datafolder)
+    return os.path.join(keyfolder, "identity.priv")
+
+
+def first_run(datafolder):
+    """
+    Do our first run and generate keys
+    :param datafolder:
+    :return:
+    """
+    keyfolder = get_keys_folder(datafolder)
+    if not os.path.exists(keyfolder):
+        os.makedirs(keyfolder)
+    if not os.path.isfile(get_priv_keyfilename(datafolder)):
+        key = genkey()
+        savekey(key, keyfolder, "identity")
+        sys.stderr.write("ident key generated\n")
 
 
 def genkey():
@@ -41,6 +81,19 @@ def load(privkeypem):
         return SigningKey.from_pem(privfile.read())
 
 
+def get_pubkey(datafolder):
+    """
+    Return the public key pem file
+    :param datafolder:
+    :return:
+    """
+    filename = get_pub_keyfilename(datafolder)
+    if os.path.exists(filename):
+        with open(filename, "r") as filehandle:
+            return filehandle.read()
+    return None
+
+
 def sign_string(privkey, message):
     """
     Sign a string
@@ -71,6 +124,8 @@ def test_genkey():
     Test key generation
     :return:
     """
+    first_run(".")
+
     key = genkey()
     assert key
 
