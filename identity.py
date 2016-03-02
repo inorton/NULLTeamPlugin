@@ -3,7 +3,7 @@ import hashlib
 import os
 import sys
 
-from ecdsa import SigningKey, curves
+from ecdsa import SigningKey, VerifyingKey, curves
 from ecdsa import util as ecdsautil
 
 def get_keys_folder(datafolder):
@@ -81,6 +81,16 @@ def load(privkeypem):
         return SigningKey.from_pem(privfile.read())
 
 
+def loadpub(pubkeypem):
+    """
+    Load a public key from a PEM file
+    :param pubkeypem:
+    :return:
+    """
+    with open(pubkeypem, "rb") as pubfile:
+        return VerifyingKey.from_pem(pubfile.read())
+
+
 def get_pubkey(datafolder):
     """
     Return the public key pem file
@@ -118,28 +128,4 @@ def verify_string(pubkey, signature, message):
     signature = binascii.unhexlify(signature)
     return pubkey.verify(signature, data, hashfunc=hashlib.sha1, sigdecode=ecdsautil.sigdecode_der)
 
-
-def test_genkey():
-    """
-    Test key generation
-    :return:
-    """
-    first_run(".")
-
-    key = genkey()
-    assert key
-
-    savekey(key, ".", "test")
-
-    loaded = load("test.priv")
-
-    signed = sign_string(loaded, "hello")
-
-    pubkey = loaded.get_verifying_key()
-
-    assert(verify_string(pubkey, signed, "hello"))
-
-
-if __name__ == "__main__":
-    test_genkey()
 
