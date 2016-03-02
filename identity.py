@@ -4,6 +4,7 @@ import os
 import sys
 
 from ecdsa import SigningKey, VerifyingKey, curves
+from ecdsa import ecdsa
 from ecdsa import util as ecdsautil
 
 def get_keys_folder(datafolder):
@@ -88,7 +89,16 @@ def loadpub(pubkeypem):
     :return:
     """
     with open(pubkeypem, "rb") as pubfile:
-        return VerifyingKey.from_pem(pubfile.read())
+        return loadpubstr(pubfile.read())
+
+
+def loadpubstr(pemstring):
+    """
+    Load a public key from PEM string
+    :param pemstring:
+    :return:
+    """
+    return VerifyingKey.from_pem(pemstring)
 
 
 def get_pubkey(datafolder):
@@ -129,3 +139,11 @@ def verify_string(pubkey, signature, message):
     return pubkey.verify(signature, data, hashfunc=hashlib.sha1, sigdecode=ecdsautil.sigdecode_der)
 
 
+def ecdh(privkey, pubkey):
+    """
+    Given a loaded private key and a loaded public key, perform an ECDH exchange
+    :param privkey:
+    :param pubkey:
+    :return:
+    """
+    return ecdsa.ecdh(privkey, pubkey)

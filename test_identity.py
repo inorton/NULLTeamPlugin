@@ -2,7 +2,6 @@
 Py.Test tests for identity.py
 """
 import os
-from ecdsa import ecdsa
 import identity
 
 
@@ -48,7 +47,7 @@ def test_ecdh(tmpdir):
     alicepub = identity.loadpub(identity.get_pub_keyfilename(alicedir))
     bobpub = identity.loadpub(identity.get_pub_keyfilename(bobdir))
 
-    shared_bob = ecdsa.ecdh(bobprivkey, alicepub)
-    shared_alice = ecdsa.ecdh(aliceprivkey, bobpub)
+    shared_bob = identity.ecdh(bobprivkey, alicepub)
+    shared_alice = identity.ecdh(aliceprivkey, bobpub)
 
     assert shared_alice == shared_bob
