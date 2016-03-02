@@ -86,7 +86,7 @@ class Point( object ):
     """Add one point to another point."""
 
     # X9.62 B.3:
-
+    if other is None: return self
     if other == INFINITY: return self
     if self == INFINITY: return other
     assert self.__curve == other.__curve

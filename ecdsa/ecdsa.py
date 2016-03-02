@@ -151,6 +151,27 @@ class Private_key( object ):
     return Signature( r, s )
 
 
+def ecdh(privkey, pubkey):
+  """
+  Do an ECDH exchange with our private key and a public key
+  :param privkey PrivateKey object:
+  :param pubkey PublicKey object:
+  :return:
+  """
+  result = None
+  addend = pubkey.pubkey.point
+  pk = privkey.privkey.secret_multiplier
+
+  while pk:
+    if pk & 1:
+      # add
+      result = addend.__add__(result)
+    # double
+    addend = addend.double()
+    pk >>= 1
+  return result
+
+
 
 def int_to_string( x ):
   """Convert integer x into a string of bytes, as per X9.62."""
