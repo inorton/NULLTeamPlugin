@@ -20,6 +20,7 @@ Handshake:
 
 """
 
+import os
 import identity
 import hashlib
 import pyaes
@@ -38,20 +39,25 @@ def aes_encrypt_str(key, plaintext):
     :param plaintext:
     :return:
     """
-    iv = str(uuid.uuid4())[-16:]
+    iv = os.urandom(16)
     encrypter = pyaes.Encrypter(pyaes.AESModeOfOperationCBC(key, iv))
-    return encrypter.feed(plaintext)
+    ctext = encrypter.feed(plaintext)
+    ctext += encrypter.feed()
+    return ctext, iv
 
 
-def aes_decrypt_str(key, ciphertext):
+def aes_decrypt_str(key, iv, ciphertext):
     """
     Decrypt a string with AES
     :param key:
+    :param iv:
     :param ciphertext:
     :return:
     """
-    decrypter = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key))
-    return decrypter.feed(ciphertext)
+    decrypter = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, iv))
+    ptext = decrypter.feed(ciphertext)
+    ptext += decrypter.feed()
+    return ptext
 
 
 def derive_key(kdf, shared):
@@ -90,9 +96,11 @@ def server_handshake_begin(server_priv, message):
     shared = identity.ecdh(server_priv, session_pub)
     secret = derive_key(message["kdf"], shared)
 
-    challenge = aes_encrypt_str(secret, str(uuid.uuid4()))
-    response = {"challenge": challenge}
-    return secret, client_pub, response
+    challenge_plain = str(uuid.uuid4())
+
+    challenge, iv = aes_encrypt_str(secret, challenge_plain)
+    response = {"challenge": challenge, "iv": iv}
+    return secret, client_pub, response, challenge_plain
 
 
 def client_handshake_begin(ecdsa_priv, ecdh_priv, server_pub, curve=identity.DEFAULT_KEYTYPE, kdf=DEFAULT_KDF):
@@ -125,3 +133,26 @@ def client_handshake_begin(ecdsa_priv, ecdh_priv, server_pub, curve=identity.DEF
     return secret, message
 
 
+def client_handshake_finish(client_priv, secret, challenge):
+    """
+    Sign the challenge from the server's handshake response
+    :param client_priv:
+    :param secret:
+    :param challenge:
+    :return:
+    """
+    plaintext = aes_decrypt_str(secret, challenge["iv"], challenge["challenge"])
+    signature = identity.sign_string(client_priv, plaintext)
+    return {"signature": signature}
+
+
+def server_handshake_finish(client_pub, challenge, response):
+    """
+    Verify the client processed our handshake correctly
+    :param client_pub: client's long term public key
+    :param challenge: challenge plaintext
+    :param response: message containing a signature of the plaintext
+    :return:
+    """
+    assert identity.verify_string(client_pub, response["signature"], challenge)
+    return {"status": "complete"}

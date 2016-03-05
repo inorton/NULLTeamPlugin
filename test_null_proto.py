@@ -39,8 +39,17 @@ def test_handshake(temp_client):
     assert secret
     assert message
 
-    server_secret, gotpub, challenge = null_proto.server_handshake_begin(serverpriv, message)
+    server_secret, gotpub, challenge, challenge_plain = null_proto.server_handshake_begin(serverpriv, message)
 
     assert secret == server_secret
+
+    response = null_proto.client_handshake_finish(temp_client["longterm"],
+                                                  server_secret, challenge)
+
+    complete = null_proto.server_handshake_finish(gotpub,
+                                                  challenge_plain, response)
+
+    assert "status" in complete
+    assert complete["status"] == "complete"
 
 
