@@ -9,6 +9,7 @@ on ECDSA and ECDHE
 
 """
 import threading
+import hashlib
 import time
 import os
 import libs
@@ -16,14 +17,19 @@ import json
 
 import identity
 import web
-import uuid
+import null_proto
 
 MAX_LOCATION_AGE = 600
 
-challenges = dict()
-chlock = threading.Semaphore()
+
+# things connecting to us
+pending_sessions = dict()
+# sessions that have completed handshakes
+sessions = dict()
+session_lock = threading.Semaphore()
+
 cmdrs = dict()
-cmdrslock = threading.Semaphore()
+cmdrs_lock = threading.Semaphore()
 
 # server's identity is this folder, if we don't have one, generate
 KEYFILE = identity.get_priv_keyfilename(libs.THISDIR)
@@ -39,49 +45,31 @@ def run():
     app.run()
 
 
-def encode_message(challenge, payload):
+def encode_message(payload):
     """
-    Encode the message into something we can sign/verify
+    Encode the message into something we can send/encrypt or sign
     :param challenge:
     :param payload:
     :return:
     """
     message = {
-        "challenge": challenge,
         "message": payload
     }
     return json.dumps(message)
 
 
-def sign_mesage(privkey, challenge, payload):
+class Session(object):
     """
-    Encode/Sign the message
-    :param privkey:
-    :param challenge:
-    :param payload:
-    :return:
+    A connection to a client
     """
-    message = encode_message(challenge, payload)
-    signature = identity.sign_string(privkey, message)
+    def __init__(self):
+        self.trusted = False
+        self.secret = None
+        self.pubkey = None
+        self.commander = None
+        self.challenge_plain = None
+        self.started = time.time()
 
-    return json.dumps({
-        "signature": signature,
-        "challenge": challenge,
-        "message": payload
-    })
-
-
-def verify_message(message):
-    """
-    Decode and verify the message
-    :param message:
-    :return:
-    """
-    payload = encode_message(message["challenge"], message["message"])
-    signature = message["signature"]
-    pubkeystr = message["message"]["pubkey"]
-    pubkey = identity.loadpubstr(pubkeystr)
-    return identity.verify_string(pubkey, signature, payload)
 
 class Commander(object):
     """
@@ -92,8 +80,9 @@ class Commander(object):
         self.name = name
         self.location = location
         self.timestamp = timestamp
-        self.pubkey = None
-        self.datakey = None
+        self.verified = False
+        self.pubkey = None   # long term pubkey
+        self.datakey = None  # secret key for this session
 
     def load(self, dictionary):
         """
@@ -105,15 +94,6 @@ class Commander(object):
         self.location = dictionary["location"]
         self.timestamp = time.time()
 
-    def compute_session_key(self, user_signed_hello):
-        """
-        Compute a session key with the user's ephemeral EC key
-        :param user_signed_hello:
-        :return:
-        """
-        pass
-
-
     def expired(self):
         """
         Return true if this is expured
@@ -123,45 +103,45 @@ class Commander(object):
         return now - self.timestamp > MAX_LOCATION_AGE
 
 
-class Hello:
+class handshake_begin:
     """
-    Client sends us it's signed ephemeral public key, We verify.
-    Client should already have our public key.
-    Save the session key if the Hello verifies.
-
-    Sig(client, client_tmp_pub), client_pub, client_tmp_pub
-
+    null protocol handshake begin
     """
     def POST(self):
         postdata = web.data()
         request = json.loads(postdata)
-        # {
-        #   tmp_pub: ephemeral_pubkey,
-        #   pub: client_pubkey,
-        #   tmp_pub_signed: ephemeral_pubkey_signed_by_client_priv
-        # }
+
+        server_secret, gotpub, challenge, challenge_plain = null_proto.server_handshake_begin(PRIVKEY, request)
+
+        session = Session()
+        session.secret = server_secret
+        session.pubkey = gotpub
+        session.challenge_plain = challenge_plain
+        pubhash = hashlib.sha512(gotpub.from_der()).hexdigest()
+
+        with session_lock:
+            pending_sessions[pubhash] = session
+
+        return json.dumps(challenge)
 
 
-
-        return ""
-
-
-class ReportLocation:
+class handshake_finish:
+    """
+    null protocol handshake completion
+    """
     def POST(self):
         postdata = web.data()
         request = json.loads(postdata)
-        with chlock:
-            prune_challenges()
-            challenge = request["challenge"]
-            if challenge not in challenges:
-                raise web.notfound()
-            if not verify_message(request):
-                raise web.unauthorized()
 
-        # we have a valid message, insert it into our records
-        with cmdrslock:
-            cmdr = request["message"]["name"]
+        pubhash = request["fingerprint"]
+        with session_lock:
+            assert pubhash in pending_sessions
+            session = pending_sessions[pubhash]
+            result = null_proto.server_handshake_finish(session.pubkey, session.challenge_plain, request)
 
+            # session ready
+
+            return json.dumps(result)
 
 
 if __name__ == "__main__":

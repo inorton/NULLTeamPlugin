@@ -144,9 +144,12 @@ def client_handshake_finish(client_priv, secret, challenge):
     :param challenge:
     :return:
     """
+    pubkeyhash = hashlib.sha512(client_priv.get_verifying_key().to_der()).hexdigest()
     plaintext = aes_decrypt_str(secret, challenge["iv"], challenge["challenge"])
     signature = identity.sign_string(client_priv, plaintext)
-    return {"signature": signature}
+    return {"signature": signature,
+            "fingerprint": pubkeyhash
+            }
 
 
 def server_handshake_finish(client_pub, challenge, response):
@@ -154,8 +157,11 @@ def server_handshake_finish(client_pub, challenge, response):
     Verify the client processed our handshake correctly
     :param client_pub: client's long term public key
     :param challenge: challenge plaintext
-    :param response: message containing a signature of the plaintext
+    :param response: message containing a signature of the plaintext and hash of the singer pubkey
     :return:
     """
+    assert "fingerprint" in response
+    pubkeyhash = hashlib.sha512(client_pub.to_der()).hexdigest()
+    assert pubkeyhash == response["fingerprint"]
     assert identity.verify_string(client_pub, response["signature"], challenge)
     return {"status": "complete"}

@@ -2,6 +2,7 @@
 Test suite for null_proto
 """
 
+import binascii
 import pytest
 import os
 import identity
@@ -53,3 +54,17 @@ def test_handshake(temp_client):
     assert complete["status"] == "complete"
 
 
+def test_encrypt():
+    """
+    Test encrypt/decrypt
+    :return:
+    """
+    secret = os.urandom(16)
+    for size in range(64, 1024, 157):
+        message = binascii.hexlify(os.urandom(size))
+
+        ctext, iv = null_proto.aes_encrypt_str(secret, message)
+
+        ptext = null_proto.aes_decrypt_str(secret, iv, ctext)
+
+        assert message == ptext
