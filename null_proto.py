@@ -21,6 +21,7 @@ Handshake:
 """
 
 import os
+import binascii
 import identity
 import hashlib
 import pyaes
@@ -43,7 +44,7 @@ def aes_encrypt_str(key, plaintext):
     encrypter = pyaes.Encrypter(pyaes.AESModeOfOperationCBC(key, iv))
     ctext = encrypter.feed(plaintext)
     ctext += encrypter.feed()
-    return ctext, iv
+    return binascii.hexlify(ctext), binascii.hexlify(iv)
 
 
 def aes_decrypt_str(key, iv, ciphertext):
@@ -54,6 +55,8 @@ def aes_decrypt_str(key, iv, ciphertext):
     :param ciphertext:
     :return:
     """
+    iv = binascii.unhexlify(iv)
+    ciphertext = binascii.unhexlify(ciphertext)
     decrypter = pyaes.Decrypter(pyaes.AESModeOfOperationCBC(key, iv))
     ptext = decrypter.feed(ciphertext)
     ptext += decrypter.feed()
