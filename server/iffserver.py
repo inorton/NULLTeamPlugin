@@ -4,43 +4,8 @@ The IFF Server!
 
 The protocol:
 
-Getting SSL into the binary distribution of EDMC is non-trivial so we have a simple authentication scheme based on ECDSA
-challenges and responses in each message. Challenges are like treated like single use tokens/cookies
-
-Client Connects,
-Client Requests a Challenge
--> Server Generates a random challenge message
-   Server keeps a record of the last 2 minutes of challenges.
-   Server signs challenge and returns it and the signature to the client.
-<- Signature, Challenge = Sig(Challenge)
-
-Client verifies Challenge signature
-+++ Client now trusts server +++
-
-Client Creates message (ie, some kind of request or posted data), challenge is embedded in the message
- Client signs (message)
- Client sends message, signature to server
-
-Server Verifies signature, Checks challenge is in the active challenges.
-+++ Server now trusts Client signed the challenge we gave out +++
-
-If the message is a "I am here" store the data, Expire after 30 minutes.
-
-If the message is a "Who is here" then send them Signed results based on who has trusted their public key.
-
-This whole thing obviously doesn't guard against someone sniffing the network traffic. But this is hardly top-secret
-data, it is just a game!
-
-Message Types:
-
-void ReportLocation(signature, challenge, cmdr_name, location, pvtgroup)
-
-list(cmdrs) PollLocations(signature, challenge, location)
- each cmdr in the list is basically a dictionary, {
-   CmdrName: Name,
-   TrustLevel: (number of top level signatures),
-   Location: (location text,  exactly the same form as in ReportLocation)
- }
+Getting SSL into the binary distribution of EDMC is non-trivial so we have a simple authentication scheme based
+on ECDSA and ECDHE
 
 """
 import threading
@@ -52,8 +17,6 @@ import json
 import identity
 import web
 import uuid
-
-MAX_CHALLENGE_AGE = 120
 
 MAX_LOCATION_AGE = 600
 
@@ -74,33 +37,6 @@ def run():
             "/ReportLocation", "ReportLocation",)
     app = web.application(urls, globals())
     app.run()
-
-
-def prune_challenges():
-    """
-    Clean out old challenges
-    :return:
-    """
-    now = time.time()
-    delete = list()
-    for ch in list(challenges):
-        timestamp = challenges[ch]
-        if now - timestamp > MAX_CHALLENGE_AGE:
-            delete.append(ch)
-    for ch in delete:
-        del(challenges[ch])
-
-
-def make_challenge():
-    """
-    Create a challenge, basically just a uuid and store it
-    :return:
-    """
-    challenge = str(uuid.uuid4())
-    assert challenge not in challenges  # this should never happen, its a uuid!
-
-    challenges[challenge] = time.time()
-    return challenge
 
 
 def encode_message(challenge, payload):
@@ -156,6 +92,8 @@ class Commander(object):
         self.name = name
         self.location = location
         self.timestamp = timestamp
+        self.pubkey = None
+        self.datakey = None
 
     def load(self, dictionary):
         """
@@ -167,6 +105,15 @@ class Commander(object):
         self.location = dictionary["location"]
         self.timestamp = time.time()
 
+    def compute_session_key(self, user_signed_hello):
+        """
+        Compute a session key with the user's ephemeral EC key
+        :param user_signed_hello:
+        :return:
+        """
+        pass
+
+
     def expired(self):
         """
         Return true if this is expured
@@ -176,12 +123,27 @@ class Commander(object):
         return now - self.timestamp > MAX_LOCATION_AGE
 
 
-class Challenge:
-    def GET(self):
-        with chlock:
-            prune_challenges()
-            challenge = make_challenge()
-            return sign_mesage(PRIVKEY, challenge, "")
+class Hello:
+    """
+    Client sends us it's signed ephemeral public key, We verify.
+    Client should already have our public key.
+    Save the session key if the Hello verifies.
+
+    Sig(client, client_tmp_pub), client_pub, client_tmp_pub
+
+    """
+    def POST(self):
+        postdata = web.data()
+        request = json.loads(postdata)
+        # {
+        #   tmp_pub: ephemeral_pubkey,
+        #   pub: client_pubkey,
+        #   tmp_pub_signed: ephemeral_pubkey_signed_by_client_priv
+        # }
+
+
+
+        return ""
 
 
 class ReportLocation:

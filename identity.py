@@ -7,6 +7,8 @@ from ecdsa import SigningKey, VerifyingKey, curves
 from ecdsa import ecdsa
 from ecdsa import util as ecdsautil
 
+DEFAULT_KEYTYPE = curves.NIST192p
+
 def get_keys_folder(datafolder):
     """
     :param datafolder:
@@ -52,7 +54,7 @@ def genkey():
     Generate an ECDSA key
     :return:
     """
-    return SigningKey.generate(curve=curves.NIST192p)
+    return SigningKey.generate(curve=DEFAULT_KEYTYPE)
 
 
 def savekey(keypair, path, name):
