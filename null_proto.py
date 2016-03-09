@@ -165,3 +165,42 @@ def server_handshake_finish(client_pub, challenge, response):
     assert pubkeyhash == response["fingerprint"]
     assert identity.verify_string(client_pub, response["signature"], challenge)
     return {"status": "complete"}
+
+
+def send_data(signer, sessionkey, data):
+    """
+    Encrypt some data and sign it
+    :param signer: signing key
+    :param sessionkey: encryption key
+    :param data: message (expected string)
+    :return: dict containing fingerprint, signature, iv and ciphertext
+    """
+    ctext, iv = aes_encrypt_str(sessionkey, str(data))
+    signature = identity.sign_string(signer, ctext)
+    pubkeyhash = hashlib.sha512(signer.get_verifying_key().to_der()).hexdigest()
+
+    return {
+        "fingerprint": pubkeyhash,
+        "signature": signature,
+        "iv": iv,
+        "ciphertext": ctext
+    }
+
+
+def receive_data(pubkey, sessionkey, data):
+    """
+    Verify and Decrypt a message
+    :param pubkey: the sender's signing key
+    :param sessionkey: the encryption key
+    :param data: (string)
+    :return: the plain text if the message verifies
+    """
+    pubkeyhash = hashlib.sha512(pubkey.to_der()).hexdigest()
+    assert pubkeyhash == data["fingerprint"]
+    assert identity.verify_string(pubkey,
+                                  data["signature"],
+                                  data["ciphertext"])
+
+    return aes_decrypt_str(sessionkey,
+                           data["iv"],
+                           data["ciphertext"])

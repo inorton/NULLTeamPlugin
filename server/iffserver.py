@@ -186,6 +186,21 @@ class submit_location:
     """
     Accept a new signed location from a client that has already completed handshake
     """
+    def POST(self):
+        postdata = web.data()
+        request = json.loads(postdata)
+
+        pubhash = request["fingerprint"]
+        assert pubhash in sessions
+        session = sessions[pubhash]
+        message = null_proto.receive_data(session.pubkey,
+                                          session.secret,
+                                          request)
+        location = json.loads(message)
+
+        assert "cmdr" in location
+        assert "system" in location
+        assert "group" in location
 
 
 
