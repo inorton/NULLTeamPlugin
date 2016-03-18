@@ -38,8 +38,9 @@ PRIVKEY = identity.load(identity.get_priv_keyfilename(libs.THISDIR))
 
 
 def run():
-    urls = ("/Challenge", "Challenge",
-            "/ReportLocation", "ReportLocation",)
+    urls = ("/handshake_begin", "handshake_begin",
+            "/handshake_finish", "handshake_finish",
+            "/submit_location", "submit_location",)
     app = web.application(urls, globals())
     app.run()
 
@@ -148,12 +149,15 @@ class handshake_begin:
         session.secret = server_secret
         session.pubkey = gotpub
         session.challenge_plain = challenge_plain
-        pubhash = hashlib.sha512(gotpub.from_der()).hexdigest()
+        pubhash = identity.pubkeyhash(gotpub)
 
         with session_lock:
             pending_sessions[pubhash] = session
 
         return json.dumps(challenge)
+
+    def GET(self):
+        return "the server is running"
 
 
 class handshake_finish:
@@ -202,6 +206,7 @@ class submit_location:
         assert "system" in location
         assert "group" in location
 
+        return json.dumps({"status":"complete"})
 
 
 if __name__ == "__main__":

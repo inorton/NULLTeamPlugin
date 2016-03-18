@@ -49,6 +49,15 @@ def first_run(datafolder):
         sys.stderr.write("ident key generated\n")
 
 
+def pubkeyhash(pubkey):
+    """
+    Get a hash of a public key
+    :param pubkey:
+    :return:
+    """
+    return hashlib.sha512(pubkey.to_der()).hexdigest()
+
+
 def genkey():
     """
     Generate an ECDSA key

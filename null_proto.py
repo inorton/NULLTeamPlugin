@@ -144,7 +144,7 @@ def client_handshake_finish(client_priv, secret, challenge):
     :param challenge:
     :return:
     """
-    pubkeyhash = hashlib.sha512(client_priv.get_verifying_key().to_der()).hexdigest()
+    pubkeyhash = identity.pubkeyhash(client_priv.get_verifying_key())
     plaintext = aes_decrypt_str(secret, challenge["iv"], challenge["challenge"])
     signature = identity.sign_string(client_priv, plaintext)
     return {"signature": signature,
